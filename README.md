@@ -47,13 +47,12 @@ while ($req = $worker->waitRequest()) {
 Require the RoadRunner PHP library:
 
 ```bash
-composer require spiral/roadrunner
+composer require spiral/roadrunner "^2.0"
 ```
 
 Download the RoadRunner Server binary: 
 
 ```bash
-composer require spiral/roadrunner
 vendor/bin/rr get --location bin/
 chmod +x bin/rr
 ```
