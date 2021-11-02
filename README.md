@@ -12,34 +12,42 @@ Create worker entry point `bin/roadrunner-worker.php`:
 
 declare(strict_types=1);
 
+use Mezzio\Application;
+use Mezzio\MiddlewareFactory;
+use Spiral\RoadRunner\Http\PSR7Worker;
+use Spiral\RoadRunner\Worker;
+use Laminas\Diactoros\ServerRequestFactory;
+use Laminas\Diactoros\StreamFactory;
+use Laminas\Diactoros\UploadedFileFactory;
+
 chdir(dirname(__DIR__));
+
 require 'vendor/autoload.php';
 
-$app = (static function (): \Mezzio\Application {
+$app = (static function (): Application {
     $container = require 'config/container.php';
-    assert($container instanceof Psr\Container\ContainerInterface);
+    $app       = $container->get(Application::class);
+    $factory   = $container->get(MiddlewareFactory::class);
 
-    $app = $container->get(\Mezzio\Application::class);
-    $factory = $container->get(\Mezzio\MiddlewareFactory::class);
     (require 'config/pipeline.php')($app, $factory, $container);
     (require 'config/routes.php')($app, $factory, $container);
 
     return $app;
 })();
 
-$worker = new Spiral\RoadRunner\Http\PSR7Worker(
-    Spiral\RoadRunner\Worker::create(),
-    new Laminas\Diactoros\ServerRequestFactory(),
-    new Laminas\Diactoros\StreamFactory(),
-    new Laminas\Diactoros\UploadedFileFactory(),
+$worker = new PSR7Worker(
+    Worker::create(),
+    new ServerRequestFactory(),
+    new StreamFactory(),
+    new UploadedFileFactory(),
 );
 
 while ($req = $worker->waitRequest()) {
     try {
         $response = $app->handle($req);
         $worker->respond($response);
-    } catch (\Throwable $e) {
-        $worker->getWorker()->error((string)$e);
+    } catch (Throwable $throwable) {
+        $worker->getWorker()->error((string)$throwable);
     }
 }
 ```
